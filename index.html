@@ -1,40 +1,564 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
-    <!-- <meta charset="UTF-8"> -->
-    <!-- <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
-    <title>Mark</title>
-    <link rel="stylesheet" href="\style.css">
-    <!-- <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/156/156138.png">
-    <meta name="viewport" content="width=device-width, initial-scale=1"> -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Monolith | Vanilla JS Busy Board</title>
+    <style>
+        /* --- 1. MODERN RESET & VARIABLES --- */
+        :root {
+            --bg-deep: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --accent-primary: #38bdf8; /* Sky Blue */
+            --accent-secondary: #a855f7; /* Purple */
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+            --shadow-glow: 0 0 20px rgba(56, 189, 248, 0.15);
+            --font-family: 'Inter', system-ui, sans-serif;
+            --z-nav: 1000;
+            --z-overlay: 999;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* --- 2. LAYOUT UTILITIES --- */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+            display: grid;
+            gap: 4rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            margin-top: 2rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        /* --- 3. NAVIGATION (HAMBURGER) --- */
+        .nav-toggle {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: var(--z-nav);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Hamburger Lines */
+        .line {
+            width: 30px;
+            height: 3px;
+            background-color: var(--text-main);
+            border-radius: 3px;
+            transition: all 0.3s ease-in-out;
+            transform-origin: center;
+        }
+
+        /* Hamburger Animation State */
+        .nav-open .line:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+        .nav-open .line:nth-child(2) { opacity: 0; transform: translateX(-10px); }
+        .nav-open .line:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+
+        /* Full Screen Menu Overlay */
+        .nav-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            z-index: var(--z-overlay);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .nav-link {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--text-main);
+            text-decoration: none;
+            position: relative;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: transform 0.4s ease, opacity 0.4s ease, color 0.2s;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-primary);
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+        }
+
+        /* Staggered Animation for links */
+        .nav-overlay.active .nav-link {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .nav-overlay.active .nav-link:nth-child(1) { transition-delay: 0.1s; }
+        .nav-overlay.active .nav-link:nth-child(2) { transition-delay: 0.2s; }
+
+        /* --- 4. THE CARD SYSTEM --- */
+        .interactive-section {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .interactive-section:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            border-bottom: var(--glass-border);
+            padding-bottom: 1rem;
+        }
+
+        .section-title h2 { font-size: 1.5rem; color: var(--text-main); }
+        .section-desc { font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem; }
+        .learn-more {
+            font-size: 0.8rem;
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- 5. WIDGET STYLES --- */
+        /* RGB Sliders */
+        .slider-group { display: flex; flex-direction: column; gap: 1rem; }
+        .slider-row { display: flex; align-items: center; gap: 1rem; }
+        input[type="range"] {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 5px;
+            background: #334155;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--thumb-color, white);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--thumb-color, white);
+        }
+        .colour-preview {
+            width: 100%;
+            height: 60px;
+            border-radius: 8px;
+            margin-top: 1rem;
+            transition: background 0.1s linear;
+            border: var(--glass-border);
+        }
+
+        /* Drag Physics */
+        #drag-zone {
+            height: 300px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+        .particle {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-secondary);
+            border-radius: 50%;
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            cursor: grab;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+        }
+        .particle:active { cursor: grabbing; transform: scale(1.1); }
+
+        /* Key Listener */
+        .key-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 1rem;
+            text-align: center;
+        }
+        .key-box {
+            background: #334155;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            transition: all 0.1s;
+        }
+        .key-box.active {
+            background: var(--accent-primary);
+            color: #0f172a;
+            transform: scale(0.95);
+        }
+        .key-label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); }
+        .key-val { font-size: 1.5rem; font-weight: bold; }
+        .key-box.active .key-label { color: #1e293b; }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: var(--glass-border);
+            margin-top: 2rem;
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <h1>Mark Lally</h1>
-  </header>
-  <main>
-    <p>This is my website where I document my work and projects.</p>
-    <p>I'm a developer who loves to create solutions to problems through code.</p>
-    <p>Here are some of the skills and technologies I use:</p>
-    <ul>
-      <li>Python</li>
-      <li>HTML</li>
-      <li>CSS</li>
-      <li>JavaScript</li>
-    </ul>
-  </main>
 
-  <footer>
-    <p>Follow my coding journey</p>
-    <ol>
-      <li><a href="https://github.com/jakmar86">GitHub</a></li>
-    </ol>
-  </footer>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle Menu">
+        <span class="line"></span>
+        <span class="line"></span>
+        <span class="line"></span>
+    </button>
 
-<div class="image">
-  <img src="\0_2.jpg" alt="mark" class="center">
-</div>
+    <div class="nav-overlay" id="nav-overlay">
+        <a href="http://www.bylally.com" class="nav-link" target="_blank">bylally.com</a>
+        <a href="https://github.com/jakmar86" class="nav-link" target="_blank">github.com/jakmar86</a>
+    </div>
 
+    <div class="container">
+        <header>
+            <h1>The Monolith</h1>
+            <p style="color: var(--text-muted);">A Pure Vanilla JS Interactive Showcase</p>
+        </header>
+
+        <section class="interactive-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <h2>Reactive Colour Mixer</h2>
+                    <p class="section-desc">Direct DOM manipulation modifying CSS Custom Properties in real-time.</p>
+                </div>
+                <a href="#" class="learn-more">Doc: CSS Vars</a>
+            </div>
+            
+            <div class="slider-group">
+                <div class="slider-row">
+                    <label style="color:#ef4444; width: 20px;">R</label>
+                    <input type="range" id="input-r" min="0" max="255" value="56" style="--thumb-color: #ef4444;">
+                </div>
+                <div class="slider-row">
+                    <label style="color:#22c55e; width: 20px;">G</label>
+                    <input type="range" id="input-g" min="0" max="255" value="189" style="--thumb-color: #22c55e;">
+                </div>
+                <div class="slider-row">
+                    <label style="color:#3b82f6; width: 20px;">B</label>
+                    <input type="range" id="input-b" min="0" max="255" value="248" style="--thumb-color: #3b82f6;">
+                </div>
+            </div>
+            <div id="colour-output" class="colour-preview" style="background-color: rgb(56, 189, 248);"></div>
+            <p style="text-align: center; margin-top: 10px; font-family: monospace;" id="rgb-text">rgb(56, 189, 248)</p>
+        </section>
+
+        <section class="interactive-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <h2>Kinetic Playground</h2>
+                    <p class="section-desc">Mouse events (mousedown, mousemove, mouseup) with boundary collision logic.</p>
+                </div>
+                <a href="#" class="learn-more">Doc: Mouse Events</a>
+            </div>
+            
+            <div id="drag-zone">
+                <div class="particle" id="dragger" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    <svg width="20" height="20" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M19 9l3 3-3 3M9 19l3 3 3-3"/></svg>
+                </div>
+                <p style="position: absolute; bottom: 10px; right: 10px; font-size: 0.7rem; color: rgba(255,255,255,0.3);">DRAG ME</p>
+            </div>
+        </section>
+
+        <section class="interactive-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <h2>Event Stream</h2>
+                    <p class="section-desc">Global event listener visualising `keydown` properties.</p>
+                </div>
+                <a href="#" class="learn-more">Doc: KeyboardEvent</a>
+            </div>
+
+            <div style="margin-bottom: 1rem; text-align: center; color: var(--accent-primary);">
+                Press any key...
+            </div>
+            
+            <div class="key-display">
+                <div class="key-box" id="key-code-box">
+                    <div class="key-label">event.code</div>
+                    <div class="key-val" id="disp-code">-</div>
+                </div>
+                <div class="key-box" id="key-key-box">
+                    <div class="key-label">event.key</div>
+                    <div class="key-val" id="disp-key">-</div>
+                </div>
+                <div class="key-box" id="key-which-box">
+                    <div class="key-label">event.which</div>
+                    <div class="key-val" id="disp-which">-</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="interactive-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <h2>The Node Factory</h2>
+                    <p class="section-desc">Procedural generation of DOM nodes. State persists via LocalStorage.</p>
+                </div>
+                <a href="#" class="learn-more">Doc: Node Interface</a>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <button id="btn-add" style="padding: 10px 20px; background: var(--accent-primary); border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Add Element</button>
+                <button id="btn-clear" style="padding: 10px 20px; background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); border-radius: 6px; cursor: pointer;">Clear All</button>
+            </div>
+            
+            <div id="factory-floor" style="display: flex; flex-wrap: wrap; gap: 10px; min-height: 100px;">
+                </div>
+        </section>
+
+    </div>
+
+    <footer>
+        <p>Built in the UK 🇬🇧 by Gemini. No Frameworks. Pure Code.</p>
+    </footer>
+
+    <script>
+        /* --- MENU LOGIC --- */
+        const navToggle = document.getElementById('nav-toggle');
+        const navOverlay = document.getElementById('nav-overlay');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        navToggle.addEventListener('click', () => {
+            navToggle.classList.toggle('nav-open');
+            navOverlay.classList.toggle('active');
+        });
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                navToggle.classList.remove('nav-open');
+                navOverlay.classList.remove('active');
+            });
+        });
+
+        /* --- EXISTING WIDGET LOGIC & LOCAL STORAGE --- */
+
+        /* 1. COLOUR MIXER */
+        const inputs = {
+            r: document.getElementById('input-r'),
+            g: document.getElementById('input-g'),
+            b: document.getElementById('input-b')
+        };
+        const output = document.getElementById('colour-output');
+        const textOutput = document.getElementById('rgb-text');
+
+        function updateColour(save = true) {
+            const r = inputs.r.value;
+            const g = inputs.g.value;
+            const b = inputs.b.value;
+            const colorVal = `rgb(${r}, ${g}, ${b})`;
+            
+            output.style.backgroundColor = colorVal;
+            textOutput.textContent = colorVal;
+            output.style.boxShadow = `0 0 30px ${colorVal.replace(')', ', 0.5)')}`;
+
+            if(save) {
+                localStorage.setItem('monolith_rgb', JSON.stringify({r, g, b}));
+            }
+        }
+
+        Object.values(inputs).forEach(input => input.addEventListener('input', () => updateColour(true)));
+
+        /* 2. DRAG PHYSICS */
+        const dragZone = document.getElementById('drag-zone');
+        const dragger = document.getElementById('dragger');
+        let isDragging = false;
+
+        dragger.addEventListener('mousedown', () => {
+            isDragging = true;
+            dragger.style.cursor = 'grabbing';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            dragger.style.cursor = 'grab';
+        });
+
+        dragZone.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const rect = dragZone.getBoundingClientRect();
+            // Centre calculation
+            let x = e.clientX - rect.left;
+            let y = e.clientY - rect.top;
+            const padding = 20;
+            x = Math.max(padding, Math.min(x, rect.width - padding));
+            y = Math.max(padding, Math.min(y, rect.height - padding));
+            
+            dragger.style.left = `${x}px`;
+            dragger.style.top = `${y}px`;
+            dragger.style.transform = `translate(-50%, -50%)`;
+        });
+
+        /* 3. KEYBOARD */
+        document.addEventListener('keydown', (e) => {
+            const dispCode = document.getElementById('disp-code');
+            const dispKey = document.getElementById('disp-key');
+            const dispWhich = document.getElementById('disp-which');
+            const boxCode = document.getElementById('key-code-box');
+            const boxKey = document.getElementById('key-key-box');
+            const boxWhich = document.getElementById('key-which-box');
+
+            dispCode.textContent = e.code;
+            dispKey.textContent = e.key === " " ? "Space" : e.key;
+            dispWhich.textContent = e.which;
+
+            [boxCode, boxKey, boxWhich].forEach(box => {
+                box.classList.remove('active');
+                void box.offsetWidth; 
+                box.classList.add('active');
+            });
+        });
+
+        const keyBoxes = document.querySelectorAll('.key-box');
+        keyBoxes.forEach(box => {
+            box.addEventListener('transitionend', () => {
+                box.classList.remove('active');
+            });
+        });
+
+        /* 4. NODE FACTORY (With Persistence) */
+        const btnAdd = document.getElementById('btn-add');
+        const btnClear = document.getElementById('btn-clear');
+        const factoryFloor = document.getElementById('factory-floor');
+        const colours = ['#f472b6', '#38bdf8', '#4ade80', '#facc15', '#a78bfa'];
+
+        // Helper to load nodes from storage
+        let storedNodes = JSON.parse(localStorage.getItem('monolith_nodes') || '[]');
+
+        function createNodeDOM(id, colorVal, animate = true) {
+            const chip = document.createElement('div');
+            chip.style.backgroundColor = 'rgba(255,255,255,0.1)';
+            chip.style.border = `1px solid ${colorVal}`;
+            chip.style.color = colorVal;
+            chip.style.padding = '5px 15px';
+            chip.style.borderRadius = '20px';
+            chip.style.fontSize = '0.8rem';
+            chip.style.cursor = 'pointer';
+            chip.style.userSelect = 'none';
+            chip.innerText = id;
+            chip.dataset.id = id; // Store ID in DOM for removal reference
+
+            // Remove logic
+            chip.addEventListener('click', () => {
+                chip.style.transform = 'scale(0)';
+                // Update Storage
+                storedNodes = storedNodes.filter(n => n.id !== id);
+                localStorage.setItem('monolith_nodes', JSON.stringify(storedNodes));
+                setTimeout(() => chip.remove(), 200);
+            });
+
+            factoryFloor.appendChild(chip);
+
+            if (animate) {
+                chip.animate([
+                    { transform: 'scale(0.5)', opacity: 0 },
+                    { transform: 'scale(1)', opacity: 1 }
+                ], { duration: 200, fill: 'forwards' });
+            }
+        }
+
+        // Add Button Click
+        btnAdd.addEventListener('click', () => {
+            const randomColor = colours[Math.floor(Math.random() * colours.length)];
+            const newId = `Node_${Math.floor(Math.random() * 1000)}`;
+            
+            // Add to State
+            storedNodes.push({ id: newId, color: randomColor });
+            localStorage.setItem('monolith_nodes', JSON.stringify(storedNodes));
+
+            createNodeDOM(newId, randomColor, true);
+        });
+
+        // Clear Button Click
+        btnClear.addEventListener('click', () => {
+            while (factoryFloor.firstChild) {
+                factoryFloor.removeChild(factoryFloor.firstChild);
+            }
+            storedNodes = [];
+            localStorage.setItem('monolith_nodes', '[]');
+        });
+
+        /* --- INITIALISATION --- */
+        window.addEventListener('DOMContentLoaded', () => {
+            // Restore Colour Mixer
+            const savedRGB = JSON.parse(localStorage.getItem('monolith_rgb'));
+            if (savedRGB) {
+                inputs.r.value = savedRGB.r;
+                inputs.g.value = savedRGB.g;
+                inputs.b.value = savedRGB.b;
+                updateColour(false); // Update UI but don't re-save immediately
+            }
+
+            // Restore Nodes
+            storedNodes.forEach(node => {
+                createNodeDOM(node.id, node.color, false);
+            });
+        });
+
+    </script>
 </body>
 </html>
