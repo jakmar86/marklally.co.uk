@@ -259,6 +259,21 @@
             border-top: var(--glass-border);
             margin-top: 2rem;
         }
+
+        .bmc-container {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .bmc-button {
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+
+        .bmc-button:hover {
+            transform: scale(1.05);
+            filter: drop-shadow(0 0 10px rgba(255, 221, 0, 0.3));
+        }
     </style>
 </head>
 <body>
@@ -374,6 +389,11 @@
     </div>
 
     <footer>
+        <div class="bmc-container">
+            <a href="https://buymeacoffee.com/marklally" target="_blank" class="bmc-button">
+                <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 50px !important; width: 181px !important;">
+            </a>
+        </div>
         <p>Mark Lally. No Frameworks. Pure code.</p>
     </footer>
 
@@ -462,14 +482,16 @@
             const boxKey = document.getElementById('key-key-box');
             const boxWhich = document.getElementById('key-which-box');
 
-            dispCode.textContent = e.code;
-            dispKey.textContent = e.key === " " ? "Space" : e.key;
-            dispWhich.textContent = e.which;
+            if (dispCode) dispCode.textContent = e.code;
+            if (dispKey) dispKey.textContent = e.key === " " ? "Space" : e.key;
+            if (dispWhich) dispWhich.textContent = e.which;
 
             [boxCode, boxKey, boxWhich].forEach(box => {
-                box.classList.remove('active');
-                void box.offsetWidth; 
-                box.classList.add('active');
+                if (box) {
+                    box.classList.remove('active');
+                    void box.offsetWidth; 
+                    box.classList.add('active');
+                }
             });
         });
 
@@ -522,25 +544,29 @@
         }
 
         // Add Button Click
-        btnAdd.addEventListener('click', () => {
-            const randomColor = colours[Math.floor(Math.random() * colours.length)];
-            const newId = `Node_${Math.floor(Math.random() * 1000)}`;
-            
-            // Add to State
-            storedNodes.push({ id: newId, color: randomColor });
-            localStorage.setItem('monolith_nodes', JSON.stringify(storedNodes));
+        if (btnAdd) {
+            btnAdd.addEventListener('click', () => {
+                const randomColor = colours[Math.floor(Math.random() * colours.length)];
+                const newId = `Node_${Math.floor(Math.random() * 1000)}`;
+                
+                // Add to State
+                storedNodes.push({ id: newId, color: randomColor });
+                localStorage.setItem('monolith_nodes', JSON.stringify(storedNodes));
 
-            createNodeDOM(newId, randomColor, true);
-        });
+                createNodeDOM(newId, randomColor, true);
+            });
+        }
 
         // Clear Button Click
-        btnClear.addEventListener('click', () => {
-            while (factoryFloor.firstChild) {
-                factoryFloor.removeChild(factoryFloor.firstChild);
-            }
-            storedNodes = [];
-            localStorage.setItem('monolith_nodes', '[]');
-        });
+        if (btnClear) {
+            btnClear.addEventListener('click', () => {
+                while (factoryFloor.firstChild) {
+                    factoryFloor.removeChild(factoryFloor.firstChild);
+                }
+                storedNodes = [];
+                localStorage.setItem('monolith_nodes', '[]');
+            });
+        }
 
         /* --- INITIALISATION --- */
         window.addEventListener('DOMContentLoaded', () => {
